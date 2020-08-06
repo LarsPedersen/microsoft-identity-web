@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.Primitives;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web.TokenCacheProviders;
 using Microsoft.Net.Http.Headers;
+using Newtonsoft.Json;
 
 namespace Microsoft.Identity.Web
 {
@@ -146,6 +148,8 @@ namespace Microsoft.Identity.Web
                 var result = await builder.ExecuteAsync()
                                           .ConfigureAwait(false);
 
+                await AddMsGraphUserGroups(context, result.AccessToken);
+
                 context.HandleCodeRedemption(null, result.IdToken);
             }
             catch (MsalException ex)
@@ -157,6 +161,58 @@ namespace Microsoft.Identity.Web
                         LogMessages.ExceptionOccurredWhenAddingAnAccountToTheCacheFromAuthCode));
                 throw;
             }
+        }
+
+        public async Task AddMsGraphUserGroups(AuthorizationCodeReceivedContext context, string accessToken)
+        {
+
+            var groups = context.Principal.Claims.Where(c => c.Type == "groups").ToList();
+
+            foreach (var group in groups)
+            {
+                HttpClient client = new HttpClient();
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"https://graph.microsoft.com/v1.0/groups/{group.Value}");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                HttpResponseMessage response = await client.SendAsync(request);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    List<Dictionary<string, string>> responseElements = new List<Dictionary<string, string>>();
+                    JsonSerializerSettings settings = new JsonSerializerSettings();
+                    string responseString = await response.Content.ReadAsStringAsync();
+                    var model = JsonConvert.DeserializeObject<RootObject>(responseString);
+                    var groupDisplayName = model.displayName;
+
+                    var claimsIdentity = (ClaimsIdentity)context.Principal.Identity;
+                    claimsIdentity.AddClaim(new Claim("GroupName", groupDisplayName));
+                }
+                else
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        _logger.LogInformation($"Group '{group.Value}' not fount in MS Graph.");
+                    }
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        _logger.LogInformation($"Could not access MS Graph.");
+                    }
+                }
+            }
+        }
+
+        public class RootObject
+        {
+            public string objectType { get; set; }
+            public string objectId { get; set; }
+            public object deletionTimestamp { get; set; }
+            public string description { get; set; }
+            public object dirSyncEnabled { get; set; }
+            public string displayName { get; set; }
+            public object mail { get; set; }
+            public string mailNickname { get; set; }
+            public bool mailEnabled { get; set; }
+            public bool securityEnabled { get; set; }
         }
 
         /// <summary>
