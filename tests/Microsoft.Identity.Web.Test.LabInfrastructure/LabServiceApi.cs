@@ -6,18 +6,18 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Microsoft.Identity.Web.Test.LabInfrastructure
 {
     /// <summary>
     /// Wrapper for lab service API.
     /// </summary>
-    public class LabServiceApi : ILabService
+    public class LabServiceApi
     {
-        private string _labAccessAppId;
-        private string _labAccessClientSecret;
+        private readonly string _labAccessAppId;
+        private readonly string _labAccessClientSecret;
         private string _labApiAccessToken;
 
         public LabServiceApi()
@@ -25,18 +25,6 @@ namespace Microsoft.Identity.Web.Test.LabInfrastructure
             using KeyVaultSecretsProvider keyVaultSecretsProvider = new KeyVaultSecretsProvider();
             _labAccessAppId = keyVaultSecretsProvider.GetMsidLabSecret("LabVaultAppID").Value;
             _labAccessClientSecret = keyVaultSecretsProvider.GetMsidLabSecret("LabVaultAppSecret").Value;
-        }
-
-        /// <summary>
-        /// Returns a test user account for use in testing.
-        /// </summary>
-        /// <param name="query">Any and all parameters that the returned user should satisfy.</param>
-        /// <returns>Users that match the given query parameters.</returns>
-        public async Task<LabResponse> GetLabResponseAsync(UserQuery query)
-        {
-            var response = await GetLabResponseFromApiAsync(query).ConfigureAwait(false);
-
-            return response;
         }
 
         public async Task<string> GetUserSecretAsync(string lab)
@@ -47,10 +35,15 @@ namespace Microsoft.Identity.Web.Test.LabInfrastructure
             };
 
             string result = await SendLabRequestAsync(LabApiConstants.LabUserCredentialEndpoint, queryDict).ConfigureAwait(false);
-            return JsonSerializer.Deserialize<LabCredentialResponse>(result).Secret;
+            return JsonConvert.DeserializeObject<LabCredentialResponse>(result).Secret;
         }
 
-        private async Task<LabResponse> GetLabResponseFromApiAsync(UserQuery query)
+        /// <summary>
+        /// Returns a test user account for use in testing.
+        /// </summary>
+        /// <param name="query">Any and all parameters that the returned user should satisfy.</param>
+        /// <returns>Users that match the given query parameters.</returns>
+        public async Task<LabResponse> GetLabResponseFromApiAsync(UserQuery query)
         {
             // Fetch user
             string result = await RunQueryAsync(query).ConfigureAwait(false);
@@ -63,17 +56,17 @@ namespace Microsoft.Identity.Web.Test.LabInfrastructure
             return CreateLabResponseFromResultStringAsync(result).Result;
         }
 
-        private async Task<LabResponse> CreateLabResponseFromResultStringAsync(string result)
+        internal async Task<LabResponse> CreateLabResponseFromResultStringAsync(string result)
         {
-            LabUser[] userResponses = JsonSerializer.Deserialize<LabUser[]>(result);
+            LabUser[] userResponses = JsonConvert.DeserializeObject<LabUser[]>(result);
 
             var user = userResponses[0];
 
             var appResponse = await GetLabResponseAsync(LabApiConstants.LabAppEndpoint + user.AppId).ConfigureAwait(false);
-            LabApp[] labApps = JsonSerializer.Deserialize<LabApp[]>(appResponse);
+            LabApp[] labApps = JsonConvert.DeserializeObject<LabApp[]>(appResponse);
 
             var labInfoResponse = await GetLabResponseAsync(LabApiConstants.LabInfoEndpoint + user.LabName).ConfigureAwait(false);
-            Lab[] labs = JsonSerializer.Deserialize<Lab[]>(labInfoResponse);
+            Lab[] labs = JsonConvert.DeserializeObject<Lab[]>(labInfoResponse);
 
             user.TenantId = labs[0].TenantId;
             user.FederationProvider = labs[0].FederationProvider;
@@ -143,7 +136,7 @@ namespace Microsoft.Identity.Web.Test.LabInfrastructure
             return await GetLabResponseAsync(uriBuilder.ToString()).ConfigureAwait(false);
         }
 
-        private async Task<string> GetLabResponseAsync(string address)
+        internal async Task<string> GetLabResponseAsync(string address)
         {
             if (string.IsNullOrWhiteSpace(_labApiAccessToken))
             {

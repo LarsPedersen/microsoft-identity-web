@@ -3,13 +3,13 @@
 
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using blazor.Data;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace blazor
 {
@@ -26,15 +26,13 @@ namespace blazor
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            string[] scopes = Configuration.GetValue<string>("CalledApi:CalledApiScopes")?.Split(' ');
-            services.AddMicrosoftWebAppAuthentication(Configuration, "AzureAd")
-                    .AddMicrosoftWebAppCallsWebApi(Configuration,
-                                                   scopes,
-                                                   "AzureAd")
-                    .AddInMemoryTokenCaches();
-            services.AddDownstreamWebApiService(Configuration);
-            services.AddMicrosoftGraph(scopes,
-                                       Configuration.GetValue<string>("CalledApi:CalledApiUrl"));
+            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+                    .AddMicrosoftIdentityWebApp(Configuration, "AzureAd", subscribeToOpenIdConnectMiddlewareDiagnosticsEvents: true)
+                        .EnableTokenAcquisitionToCallDownstreamApi()
+                            .AddMicrosoftGraph(Configuration.GetSection("GraphBeta"))
+                            .AddDownstreamWebApi("CalledApi", Configuration.GetSection("CalledApi"))
+                        .AddInMemoryTokenCaches();
+
             services.AddControllersWithViews()
                     .AddMicrosoftIdentityUI();
 
@@ -47,6 +45,7 @@ namespace blazor
             services.AddRazorPages();
             services.AddServerSideBlazor()
                        .AddMicrosoftIdentityConsentHandler();
+            services.AddSignalR().AddAzureSignalR();
             services.AddSingleton<WeatherForecastService>();
         }
 

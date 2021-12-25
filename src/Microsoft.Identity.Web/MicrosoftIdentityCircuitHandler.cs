@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,149 +40,24 @@ namespace Microsoft.Identity.Web
             builder.Services.TryAddScoped<MicrosoftIdentityConsentAndConditionalAccessHandler>();
             return builder;
         }
-    }
-
-    /// <summary>
-    /// Handler for Blazor specific APIs to handle incremental consent
-    /// and conditional access.
-    /// </summary>
-#pragma warning disable SA1402 // File may only contain a single type
-    public class MicrosoftIdentityConsentAndConditionalAccessHandler
-#pragma warning restore SA1402 // File may only contain a single type
-    {
-        private ClaimsPrincipal? _user = null;
-        private string? _baseUri = null;
-        private IHttpContextAccessor _httpContextAccessor;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MicrosoftIdentityConsentAndConditionalAccessHandler"/> class.
+        /// Add the incremental consent and conditional access handler for
+        /// web app pages, Razor pages, controllers, views, etc...
         /// </summary>
-        /// <param name="httpContextAccessor">Accessor for the current HttpContext, when available.</param>
-        public MicrosoftIdentityConsentAndConditionalAccessHandler(IHttpContextAccessor httpContextAccessor)
+        /// <param name="services">Service collection.</param>
+        /// <returns>The service collection.</returns>
+        public static IServiceCollection AddMicrosoftIdentityConsentHandler(
+            this IServiceCollection services)
         {
-            _httpContextAccessor = httpContextAccessor;
-        }
-
-        /// <summary>
-        /// Boolean to determine if server is Blazor.
-        /// </summary>
-        public bool IsBlazorServer { get; set; }
-
-        /// <summary>
-        /// Current user.
-        /// </summary>
-        public ClaimsPrincipal User
-        {
-            get
+            if (services == null)
             {
-                return _user ??
-                    (!IsBlazorServer ? _httpContextAccessor.HttpContext.User :
-                    throw new InvalidOperationException(IDWebErrorMessage.BlazorServerUserNotSet));
-            }
-            set
-            {
-                _user = value;
-            }
-        }
-
-        /// <summary>
-        /// Base URI to use in forming the redirect.
-        /// </summary>
-        public string? BaseUri
-        {
-            get
-            {
-                return _baseUri ??
-                    (!IsBlazorServer ? CreateBaseUri(_httpContextAccessor.HttpContext.Request) :
-                    throw new InvalidOperationException(IDWebErrorMessage.BlazorServerBaseUriNotSet));
-           }
-            set
-            {
-                _baseUri = value;
-            }
-        }
-
-        private static string CreateBaseUri(HttpRequest request)
-        {
-            string baseUri = string.Format(
-                CultureInfo.InvariantCulture,
-                "{0}://{1}/{2}",
-                request.Scheme,
-                request.Host.ToString(),
-                request.PathBase.ToString());
-            return baseUri;
-        }
-
-        /// <summary>
-        /// For Blazor/Razor pages to process the exception from
-        /// a user challenge.
-        /// </summary>
-        /// <param name="exception">Exception.</param>
-        public void HandleException(Exception exception)
-        {
-            MicrosoftIdentityWebChallengeUserException? microsoftIdentityWebChallengeUserException =
-                   exception as MicrosoftIdentityWebChallengeUserException;
-
-            if (microsoftIdentityWebChallengeUserException == null)
-            {
-#pragma warning disable CA1062 // Validate arguments of public methods
-                microsoftIdentityWebChallengeUserException = exception.InnerException as MicrosoftIdentityWebChallengeUserException;
-#pragma warning restore CA1062 // Validate arguments of public methods
+                throw new ArgumentNullException(nameof(services));
             }
 
-            if (microsoftIdentityWebChallengeUserException != null &&
-               IncrementalConsentAndConditionalAccessHelper.CanBeSolvedByReSignInOfUser(microsoftIdentityWebChallengeUserException.MsalUiRequiredException))
-            {
-                var properties = IncrementalConsentAndConditionalAccessHelper.BuildAuthenticationProperties(
-                    microsoftIdentityWebChallengeUserException.Scopes,
-                    microsoftIdentityWebChallengeUserException.MsalUiRequiredException,
-                    User);
-
-                string redirectUri = NavigationManager.Uri;
-                List<string> scope = properties.Parameters.ContainsKey(Constants.Scope) ? (List<string>)properties.Parameters[Constants.Scope]! : new List<string>();
-                string loginHint = properties.Parameters.ContainsKey(Constants.LoginHint) ? (string)properties.Parameters[Constants.LoginHint]! : string.Empty;
-                string domainHint = properties.Parameters.ContainsKey(Constants.DomainHint) ? (string)properties.Parameters[Constants.DomainHint]! : string.Empty;
-                string claims = properties.Parameters.ContainsKey(Constants.Claims) ? (string)properties.Parameters[Constants.Claims]! : string.Empty;
-                string url = $"{BaseUri}{Constants.BlazorChallengeUri}{redirectUri}"
-                    + $"&{Constants.Scope}={string.Join(" ", scope!)}&{Constants.LoginHint}={loginHint}"
-                    + $"&{Constants.DomainHint}={domainHint}&{Constants.Claims}={claims}";
-
-                NavigationManager.NavigateTo(url, true);
-            }
-            else
-            {
-                throw exception;
-            }
-        }
-
-        internal NavigationManager NavigationManager { get; set; } = null!;
-    }
-
-#pragma warning disable SA1402 // File may only contain a single type
-    internal class MicrosoftIdentityServiceHandler : CircuitHandler
-#pragma warning restore SA1402 // File may only contain a single type
-    {
-        public MicrosoftIdentityServiceHandler(MicrosoftIdentityConsentAndConditionalAccessHandler service, AuthenticationStateProvider provider, NavigationManager manager)
-        {
-            Service = service;
-            Provider = provider;
-            Manager = manager;
-        }
-
-        public MicrosoftIdentityConsentAndConditionalAccessHandler Service { get; }
-
-        public AuthenticationStateProvider Provider { get; }
-
-        public NavigationManager Manager { get; }
-
-        public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
-        {
-            var state = await Provider.GetAuthenticationStateAsync().ConfigureAwait(false);
-            Service.User = state.User;
-            Service.IsBlazorServer = true;
-            Service.BaseUri = Manager.BaseUri;
-            Service.NavigationManager = Manager;
-            await base.OnCircuitOpenedAsync(circuit, cancellationToken).ConfigureAwait(false);
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<CircuitHandler, MicrosoftIdentityServiceHandler>());
+            services.TryAddScoped<MicrosoftIdentityConsentAndConditionalAccessHandler>();
+            return services;
         }
     }
 }

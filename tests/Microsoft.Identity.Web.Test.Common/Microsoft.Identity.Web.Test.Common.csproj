@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-     <TargetFrameworks>netcoreapp3.1; net5.0</TargetFrameworks>
+     <TargetFrameworks>netcoreapp3.1; net462; net472; net5.0</TargetFrameworks>
     <IsPackable>false</IsPackable>
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>../../build/MSAL.snk</AssemblyOriginatorKeyFile>
@@ -16,10 +16,18 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="NSubstitute" Version="4.2.2" />
+    <PackageReference Include="xunit.assert" Version="2.4.1" />    
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.164">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net462'">
+    <Compile Remove="Mocks\LoggerMock.cs" />
+    <Compile Remove="Mocks\MockHttpContextAccessor.cs" />
+    <Compile Remove="TestHelpers\HttpContextUtilities.cs" />
   </ItemGroup>
 
   <ItemGroup>

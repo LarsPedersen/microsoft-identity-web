@@ -3,9 +3,12 @@
 
 using System;
 using System.Globalization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Client;
@@ -42,6 +45,11 @@ namespace Microsoft.Identity.Web
         public string? UserFlow { get; set; }
 
         /// <summary>
+        /// Allows specifying an AuthenticationScheme if OpenIdConnect is not the default challenge scheme.
+        /// </summary>
+        public string? AuthenticationScheme { get; set; }
+
+        /// <summary>
         /// Handles the <see cref="MsalUiRequiredException"/>.
         /// </summary>
         /// <param name="context">Context provided by ASP.NET Core.</param>
@@ -71,7 +79,7 @@ namespace Microsoft.Identity.Web
                     if (!string.IsNullOrWhiteSpace(ScopeKeySection))
                     {
                         // Load the injected IConfiguration
-                        IConfiguration configuration = context.HttpContext.RequestServices.GetRequiredService<IConfiguration>();
+                        IConfiguration? configuration = context.HttpContext.RequestServices.GetService<IConfiguration>();
 
                         if (configuration == null)
                         {
@@ -94,11 +102,43 @@ namespace Microsoft.Identity.Web
                         incrementalConsentScopes = Scopes;
                     }
 
+                    HttpRequest httpRequest;
+                    ClaimsPrincipal user;
+                    HttpContext httpContext = context.HttpContext;
+
+                    lock (httpContext)
+                    {
+                        httpRequest = httpContext.Request;
+                        user = httpContext.User;
+                    }
+
                     AuthenticationProperties properties = IncrementalConsentAndConditionalAccessHelper.BuildAuthenticationProperties(
                         incrementalConsentScopes,
                         msalUiRequiredException,
-                        context.HttpContext.User);
-                    context.Result = new ChallengeResult(properties);
+                        user,
+                        UserFlow);
+
+                    if (IsAjaxRequest(httpRequest) && (!string.IsNullOrEmpty(httpRequest.Headers[Constants.XReturnUrl])
+                        || !string.IsNullOrEmpty(httpRequest.Query[Constants.XReturnUrl])))
+                    {
+                        string redirectUri = !string.IsNullOrEmpty(httpRequest.Headers[Constants.XReturnUrl]) ? httpRequest.Headers[Constants.XReturnUrl]
+                            : httpRequest.Query[Constants.XReturnUrl];
+
+                        UrlHelper urlHelper = new UrlHelper(context);
+                        if (urlHelper.IsLocalUrl(redirectUri))
+                        {
+                            properties.RedirectUri = redirectUri;
+                        }
+                    }
+
+                    if (AuthenticationScheme != null)
+                    {
+                        context.Result = new ChallengeResult(AuthenticationScheme, properties);
+                    }
+                    else
+                    {
+                        context.Result = new ChallengeResult(properties);
+                    }
                 }
             }
 
@@ -125,6 +165,12 @@ namespace Microsoft.Identity.Web
             {
                 return null;
             }
+        }
+
+        private static bool IsAjaxRequest(HttpRequest request)
+        {
+            return string.Equals(request.Query[Constants.XRequestedWith], Constants.XmlHttpRequest, StringComparison.Ordinal) ||
+                string.Equals(request.Headers[Constants.XRequestedWith], Constants.XmlHttpRequest, StringComparison.Ordinal);
         }
     }
 }

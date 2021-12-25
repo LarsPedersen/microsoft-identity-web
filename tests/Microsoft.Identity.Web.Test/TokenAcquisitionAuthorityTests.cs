@@ -2,10 +2,19 @@
 // Licensed under the MIT License.
 
 using System.Globalization;
+using System.Net.Http;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web.Test.Common;
+using Microsoft.Identity.Web.Test.Common.Mocks;
+using Microsoft.Identity.Web.Test.Common.TestHelpers;
+using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 using Xunit;
 
 namespace Microsoft.Identity.Web.Test
@@ -14,69 +23,146 @@ namespace Microsoft.Identity.Web.Test
     {
         private TokenAcquisition _tokenAcquisition;
         private ServiceProvider _provider;
-        private ConfidentialClientApplicationOptions _applicationOptions;
+        private IOptionsMonitor<ConfidentialClientApplicationOptions> _applicationOptionsMonitor;
+        private IOptionsMonitor<MicrosoftIdentityOptions> _microsoftIdentityOptionsMonitor;
 
         private void InitializeTokenAcquisitionObjects()
         {
             _tokenAcquisition = new TokenAcquisition(
-                null,
-                null,
-                _provider.GetService<IOptions<MicrosoftIdentityOptions>>(),
-                _provider.GetService<IOptions<ConfidentialClientApplicationOptions>>(),
-                null,
-                null,
+                new MsalTestTokenCacheProvider(
+                _provider.GetService<IMemoryCache>(),
+                _provider.GetService<IOptions<MsalMemoryTokenCacheOptions>>()),
+                MockHttpContextAccessor.CreateMockHttpContextAccessor(),
+                _provider.GetService<IOptionsMonitor<MergedOptions>>(),
+                _provider.GetService<IHttpClientFactory>(),
+                _provider.GetService<ILogger<TokenAcquisition>>(),
                 _provider);
         }
 
         private void BuildTheRequiredServices()
         {
             var services = new ServiceCollection();
-
-            _applicationOptions = new ConfidentialClientApplicationOptions
-            {
-                Instance = TestConstants.AadInstance,
-                ClientId = TestConstants.ConfidentialClientId,
-                ClientSecret = "cats",
-            };
-
+            services.AddTransient(
+                provider => _microsoftIdentityOptionsMonitor);
+            services.AddTransient(
+                provider => _applicationOptionsMonitor);
+            services.Configure<MergedOptions>(options => { });
             services.AddTokenAcquisition();
-            services.AddTransient(
-                provider => Options.Create(new MicrosoftIdentityOptions
-                {
-                    Authority = TestConstants.AuthorityCommonTenant,
-                    ClientId = TestConstants.ConfidentialClientId,
-                    CallbackPath = string.Empty,
-                }));
-            services.AddTransient(
-                provider => Options.Create(_applicationOptions));
+            services.AddLogging();
+            services.AddAuthentication();
             _provider = services.BuildServiceProvider();
         }
 
         [Theory]
-        [InlineData(TestConstants.GuestTenantId)]
-        [InlineData(TestConstants.HomeTenantId)]
+        [InlineData(JwtBearerDefaults.AuthenticationScheme)]
+        [InlineData(OpenIdConnectDefaults.AuthenticationScheme)]
         [InlineData(null)]
-        [InlineData("")]
-        public void VerifyCorrectAuthorityUsedInTokenAcquisitionTests(string tenant)
+        public void VerifyCorrectSchemeTests(string scheme)
         {
             BuildTheRequiredServices();
             InitializeTokenAcquisitionObjects();
-            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder
-                 .CreateWithApplicationOptions(_applicationOptions)
-                 .WithAuthority(TestConstants.AuthorityCommonTenant).Build();
 
-            if (!string.IsNullOrEmpty(tenant))
+            if (!string.IsNullOrEmpty(scheme))
             {
-                Assert.Equal(
-                    string.Format(
-                        CultureInfo.InvariantCulture, "{0}/{1}/", TestConstants.AadInstance, tenant),
-                    _tokenAcquisition.CreateAuthorityBasedOnTenantIfProvided(
-                        app,
-                        tenant));
+                Assert.Equal(scheme, _tokenAcquisition.GetEffectiveAuthenticationScheme(scheme));
             }
             else
             {
-                Assert.Equal(app.Authority, _tokenAcquisition.CreateAuthorityBasedOnTenantIfProvided(app, tenant));
+                Assert.Equal(OpenIdConnectDefaults.AuthenticationScheme, _tokenAcquisition.GetEffectiveAuthenticationScheme(scheme));
+            }
+        }
+
+        [Theory]
+        [InlineData(TestConstants.B2CInstance)]
+        [InlineData(TestConstants.B2CLoginMicrosoft)]
+        [InlineData(TestConstants.B2CInstance, true)]
+        [InlineData(TestConstants.B2CLoginMicrosoft, true)]
+        public void VerifyCorrectAuthorityUsedInTokenAcquisition_B2CAuthorityTests(
+            string authorityInstance,
+            bool withTfp = false)
+        {
+            _microsoftIdentityOptionsMonitor = new TestOptionsMonitor<MicrosoftIdentityOptions>(new MicrosoftIdentityOptions
+            {
+                SignUpSignInPolicyId = TestConstants.B2CSignUpSignInUserFlow,
+                Domain = TestConstants.B2CTenant,
+            });
+
+            if (withTfp)
+            {
+                _applicationOptionsMonitor = new TestOptionsMonitor<ConfidentialClientApplicationOptions>(new ConfidentialClientApplicationOptions
+                {
+                    Instance = authorityInstance + "/tfp/",
+                    ClientId = TestConstants.ConfidentialClientId,
+                    ClientSecret = TestConstants.ClientSecret,
+                });
+                BuildTheRequiredServices();
+            }
+            else
+            {
+                _applicationOptionsMonitor = new TestOptionsMonitor<ConfidentialClientApplicationOptions>(new ConfidentialClientApplicationOptions
+                {
+                    Instance = authorityInstance,
+                    ClientId = TestConstants.ConfidentialClientId,
+                    ClientSecret = TestConstants.ClientSecret,
+                });
+
+                BuildTheRequiredServices();
+            }
+
+            MergedOptions mergedOptions = _provider.GetRequiredService<IOptionsMonitor<MergedOptions>>().Get(OpenIdConnectDefaults.AuthenticationScheme);
+            MergedOptions.UpdateMergedOptionsFromMicrosoftIdentityOptions(_microsoftIdentityOptionsMonitor.Get(OpenIdConnectDefaults.AuthenticationScheme), mergedOptions);
+            MergedOptions.UpdateMergedOptionsFromConfidentialClientApplicationOptions(_applicationOptionsMonitor.Get(OpenIdConnectDefaults.AuthenticationScheme), mergedOptions);
+
+            InitializeTokenAcquisitionObjects();
+
+            IConfidentialClientApplication app = _tokenAcquisition.GetOrBuildConfidentialClientApplication(mergedOptions);
+
+            string expectedAuthority = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0}/tfp/{1}/{2}/",
+                authorityInstance,
+                TestConstants.B2CTenant,
+                TestConstants.B2CSignUpSignInUserFlow);
+
+            Assert.Equal(expectedAuthority, app.Authority);
+        }
+
+        [Theory]
+        [InlineData("https://localhost:1234")]
+        [InlineData("")]
+        public void VerifyCorrectRedirectUriAsync(
+            string redirectUri)
+        {
+            _microsoftIdentityOptionsMonitor = new TestOptionsMonitor<MicrosoftIdentityOptions>(new MicrosoftIdentityOptions
+            {
+                Authority = TestConstants.AuthorityCommonTenant,
+                ClientId = TestConstants.ConfidentialClientId,
+                CallbackPath = string.Empty,
+            });
+
+            _applicationOptionsMonitor = new TestOptionsMonitor<ConfidentialClientApplicationOptions>(new ConfidentialClientApplicationOptions
+            {
+                Instance = TestConstants.AadInstance,
+                RedirectUri = redirectUri,
+                ClientSecret = TestConstants.ClientSecret,
+            });
+
+            BuildTheRequiredServices();
+            MergedOptions mergedOptions = _provider.GetRequiredService<IOptionsMonitor<MergedOptions>>().Get(OpenIdConnectDefaults.AuthenticationScheme);
+            MergedOptions.UpdateMergedOptionsFromMicrosoftIdentityOptions(_microsoftIdentityOptionsMonitor.Get(OpenIdConnectDefaults.AuthenticationScheme), mergedOptions);
+            MergedOptions.UpdateMergedOptionsFromConfidentialClientApplicationOptions(_applicationOptionsMonitor.Get(OpenIdConnectDefaults.AuthenticationScheme), mergedOptions);
+
+            InitializeTokenAcquisitionObjects();
+
+            IConfidentialClientApplication app = _tokenAcquisition.GetOrBuildConfidentialClientApplication(mergedOptions);
+
+            if (!string.IsNullOrEmpty(redirectUri))
+            {
+                Assert.Equal(redirectUri, app.AppConfig.RedirectUri);
+            }
+            else
+            {
+                Assert.Equal("https://IdentityDotNetSDKAutomation/", app.AppConfig.RedirectUri);
             }
         }
     }

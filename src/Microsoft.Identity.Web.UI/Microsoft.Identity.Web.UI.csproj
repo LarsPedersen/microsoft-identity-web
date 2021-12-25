@@ -2,7 +2,7 @@
   <PropertyGroup>
 
     <!--This should be passed from the VSTS build-->
-    <ClientSemVer Condition="'$(ClientSemVer)' == ''">0.2.0-localbuild</ClientSemVer>
+    <ClientSemVer Condition="'$(ClientSemVer)' == ''">1.0.0-localbuild</ClientSemVer>
     <!--This will generate AssemblyVersion, AssemblyFileVersion and AssemblyInformationVersion-->
     <Version>$(ClientSemVer)</Version>
 
@@ -15,8 +15,9 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/AzureAD/microsoft-identity-web</PackageProjectUrl>
     <RepositoryUrl>https://github.com/AzureAD/microsoft-identity-web</RepositoryUrl>
-    <PackageReleaseNotes>The changelog is available at https://github.com/AzureAD/microsoft-identity-web/blob/master/changelog.txt and the roadmap at https://github.com/AzureAD/microsoft-identity-web/wiki#roadmap </PackageReleaseNotes>
-    <PackageTags>Microsoft identity web ui .NET ASP.NET Core</PackageTags>
+    <PackageReleaseNotes>The release notes are available at https://github.com/AzureAD/microsoft-identity-web/releases and the roadmap at https://github.com/AzureAD/microsoft-identity-web/wiki#roadmap </PackageReleaseNotes>
+    <PackageTags>Microsoft Identity Web UI;Microsoft identity platform;Microsoft Identity Web;.NET;ASP.NET Core;Web App;Web API;B2C;Azure Active Directory;AAD;Identity;Authentication;Authorization</PackageTags>
+    <ProjectGuid>{20535D28-C2F4-4975-9982-A18E7141DA53}</ProjectGuid>
   </PropertyGroup>
 
   <PropertyGroup Label="Source Link">
@@ -32,6 +33,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AdditionalFiles Include="..\..\.sonarlint\azuread_microsoft-identity-web\CSharp\SonarLint.xml" Link="SonarLint.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\LICENSE">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
@@ -43,9 +48,12 @@
   </ItemGroup>
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1; net5.0</TargetFrameworks>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>../../build/MSAL.snk</AssemblyOriginatorKeyFile>
     <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
+    <CodeAnalysisRuleSet>..\..\.sonarlint\azuread_microsoft-identity-webcsharp.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DocumentationFile>Microsoft.Identity.Web.UI.xml</DocumentationFile>
@@ -56,11 +64,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="3.3.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.164">
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.205">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
@@ -69,5 +77,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.Identity.Web\Microsoft.Identity.Web.csproj" />
   </ItemGroup>
+
+  <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
 
 </Project>

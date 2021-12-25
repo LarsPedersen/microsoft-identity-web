@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using Microsoft.AspNetCore.Authentication;
+using System.Linq;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.Identity.Web
 {
@@ -49,6 +49,14 @@ namespace Microsoft.Identity.Web
         public string? DefaultUserFlow => SignUpSignInPolicyId;
 
         /// <summary>
+        /// Enables legacy ADAL cache serialization and deserialization.
+        /// Performance improvements when working with MSAL only apps.
+        /// Set to true if you have a shared cache with ADAL apps.
+        /// </summary>
+        /// The default is <c>false.</c>
+        public bool LegacyCacheCompatibilityEnabled { get; set; }
+
+        /// <summary>
         /// Is considered B2C if the attribute SignUpSignInPolicyId is defined.
         /// </summary>
         internal bool IsB2C
@@ -57,7 +65,16 @@ namespace Microsoft.Identity.Web
         }
 
         /// <summary>
-        /// Description of the certificates used to prove the identity of the Web app or Web API.
+        /// Is considered to have client credentials if the attribute ClientCertificates
+        /// or ClientSecret is defined.
+        /// </summary>
+        internal bool HasClientCredentials
+        {
+            get => !string.IsNullOrWhiteSpace(ClientSecret) || (ClientCertificates != null && ClientCertificates.Any());
+        }
+
+        /// <summary>
+        /// Description of the certificates used to prove the identity of the web app or web API.
         /// For the moment only the first certificate is considered.
         /// </summary>
         /// <example> An example in the appsetting.json:
@@ -75,8 +92,7 @@ namespace Microsoft.Identity.Web
         public IEnumerable<CertificateDescription>? ClientCertificates { get; set; }
 
         /// <summary>
-        /// Description of the certificates used to decrypt an encrypted token in a Web API.
-        /// For the moment only the first certificate is considered.
+        /// Description of the certificates used to decrypt an encrypted token in a web API.
         /// </summary>
         /// <example> An example in the appsetting.json:
         /// <code>
@@ -101,6 +117,35 @@ namespace Microsoft.Identity.Web
         /// (either via portal or PowerShell/CLI operation). For details see https://aka.ms/msal-net-sni.
         /// </summary>
         /// The default is <c>false.</c>
-        public bool SendX5C { get; set; } = false;
+        public bool SendX5C { get; set; }
+
+        /// <summary>
+        /// Daemon applications can validate a token based on roles, or using the ACL-based authorization
+        /// pattern to control tokens without a roles claim. If using ACL-based authorization,
+        /// Microsoft Identity Web will not throw if roles or scopes are not in the Claims.
+        /// For details see https://aka.ms/ms-identity-web/daemon-ACL.
+        /// </summary>
+        /// The default is <c>false.</c>
+        public bool AllowWebApiToBeAuthorizedByACL { get; set; }
+
+        /// <summary>
+        /// Used, when deployed to Azure, to specify explicitly a user assigned managed identity.
+        /// See https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/how-to-manage-ua-identity-portal.
+        /// </summary>
+        public string? UserAssignedManagedIdentityClientId { get; set; }
+
+        /// <summary>
+        /// Sets the ResetPassword route path.
+        /// Defaults to /MicrosoftIdentity/Account/ResetPassword,
+        /// which is the value used by Microsoft.Identity.Web.UI.
+        /// </summary>
+        public PathString ResetPasswordPath { get; set; } = new PathString("/MicrosoftIdentity/Account/ResetPassword");
+
+        /// <summary>
+        /// Sets the Error route path.
+        /// Defaults to the value /MicrosoftIdentity/Account/Error,
+        /// which is the value used by Microsoft.Identity.Web.UI.
+        /// </summary>
+        public PathString ErrorPath { get; set; } = new PathString("/MicrosoftIdentity/Account/Error");
     }
 }

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 #if (OrganizationalAuth || IndividualB2CAuth)
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
-using Microsoft.Identity.Web.TokenCacheProviders.InMemory;
 #endif
 #if (OrganizationalAuth)
 #if (MultiOrgAuth)
@@ -73,43 +73,41 @@ namespace BlazorServerWeb_CSharp
                 .AddEntityFrameworkStores<ApplicationDbContext>();
 #elif (OrganizationalAuth)
 #if (GenerateApiOrGraph)
-            string[] scopes = Configuration.GetValue<string>("CalledApi:CalledApiScopes")?.Split(' ');
+            var initialScopes = Configuration.GetValue<string>("DownstreamApi:Scopes")?.Split(' ');
+
 #endif
-            services.AddMicrosoftWebAppAuthentication(Configuration, "AzureAd")
+            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
 #if (GenerateApiOrGraph)
-                    .AddMicrosoftWebAppCallsWebApi(Configuration,
-                                                   scopes,
-                                                   "AzureAd")
-                    .AddInMemoryTokenCaches();
-#else
-                    ;
-#endif
+                .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAd"))
+                    .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
 #if (GenerateApi)
-            services.AddDownstreamWebApiService(Configuration);
+                        .AddDownstreamWebApi("DownstreamApi", Configuration.GetSection("DownstreamApi"))
 #endif
 #if (GenerateGraph)
-            services.AddMicrosoftGraph(scopes,
-                                       Configuration.GetValue<string>("CalledApi:CalledApiUrl"));
+                        .AddMicrosoftGraph(Configuration.GetSection("DownstreamApi"))
+#endif
+                        .AddInMemoryTokenCaches();
+#else
+                .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAd"));
 #endif
 #elif (IndividualB2CAuth)
 #if (GenerateApi)
-            string[] scopes = Configuration.GetValue<string>("CalledApi:CalledApiScopes")?.Split(' ');
-#endif
-            services.AddMicrosoftWebAppAuthentication(Configuration, "AzureAdB2C")
-#if (GenerateApi)
-                    .AddMicrosoftWebAppCallsWebApi(Configuration,
-                                                   scopes,
-                                                   "AzureAdB2C")
-                    .AddInMemoryTokenCaches();
+            var initialScopes = Configuration.GetValue<string>("DownstreamApi:Scopes")?.Split(' ');
 
-            services.AddDownstreamWebApiService(Configuration);
+#endif
+            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+#if (GenerateApi)
+                .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAdB2C"))
+                    .EnableTokenAcquisitionToCallDownstreamApi(initialScopes)
+                        .AddDownstreamWebApi("DownstreamApi", Configuration.GetSection("DownstreamApi"))
+                        .AddInMemoryTokenCaches();
 #else
-                    ;
+                .AddMicrosoftIdentityWebApp(Configuration.GetSection("AzureAdB2C"));
 #endif
 #endif
 #if (OrganizationalAuth || IndividualB2CAuth)
             services.AddControllersWithViews()
-                    .AddMicrosoftIdentityUI();
+                .AddMicrosoftIdentityUI();
 
             services.AddAuthorization(options =>
             {
@@ -121,12 +119,13 @@ namespace BlazorServerWeb_CSharp
             services.AddRazorPages();
 #if (OrganizationalAuth || IndividualB2CAuth)
             services.AddServerSideBlazor()
-                        .AddMicrosoftIdentityConsentHandler();
+                .AddMicrosoftIdentityConsentHandler();
 #else
             services.AddServerSideBlazor();
 #endif
 #if (IndividualLocalAuth)
             services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<IdentityUser>>();
+            services.AddDatabaseDeveloperPageExceptionFilter();
 #endif
             services.AddSingleton<WeatherForecastService>();
         }
@@ -137,9 +136,6 @@ namespace BlazorServerWeb_CSharp
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-#if (IndividualLocalAuth)
-                app.UseDatabaseErrorPage();
-#endif
             }
             else
             {

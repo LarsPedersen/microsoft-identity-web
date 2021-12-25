@@ -13,12 +13,12 @@ namespace Microsoft.Identity.Web
 {
     /// <summary>
     /// Helper methods to handle incremental consent and conditional access in
-    /// a Web app.
+    /// a web app.
     /// </summary>
     internal static class IncrementalConsentAndConditionalAccessHelper
     {
         /// <summary>
-        /// Can the exception be solved by re-signing-in the users?.
+        /// Can the exception be solved by re-signing-in the user?.
         /// </summary>
         /// <param name="ex">Exception from which the decision will be made.</param>
         /// <returns>Returns <c>true</c> if the issue can be solved by signing-in
@@ -44,11 +44,13 @@ namespace Microsoft.Identity.Web
         /// <param name="scopes">Scopes to request.</param>
         /// <param name="ex"><see cref="MsalUiRequiredException"/> instance.</param>
         /// <param name="user">User.</param>
+        /// <param name="userflow">Userflow being invoked for AAD B2C.</param>
         /// <returns>AuthenticationProperties.</returns>
         public static AuthenticationProperties BuildAuthenticationProperties(
             string[]? scopes,
             MsalUiRequiredException ex,
-            ClaimsPrincipal user)
+            ClaimsPrincipal user,
+            string? userflow = null)
         {
             if (ex == null)
             {
@@ -58,7 +60,7 @@ namespace Microsoft.Identity.Web
             scopes ??= new string[0];
             var properties = new AuthenticationProperties();
 
-            // Set the scopes, including the scopes that ADAL.NET / MSAL.NET need for the token cache
+            // Set the scopes, including the scopes that MSAL.NET needs for the token cache
             string[] additionalBuiltInScopes =
             {
                  OidcConstants.ScopeOpenId,
@@ -66,9 +68,9 @@ namespace Microsoft.Identity.Web
                  OidcConstants.ScopeProfile,
             };
 
-            properties.SetParameter<ICollection<string>>(
-                OpenIdConnectParameterNames.Scope,
-                scopes.Union(additionalBuiltInScopes).ToList());
+            HashSet<string> oidcParams = new HashSet<string>(scopes);
+            oidcParams.UnionWith(additionalBuiltInScopes);
+            properties.SetParameter(OpenIdConnectParameterNames.Scope, oidcParams.ToList());
 
             // Attempts to set the login_hint to avoid the logged-in user to be presented with an account selection dialog
             var loginHint = user.GetLoginHint();
@@ -84,6 +86,12 @@ namespace Microsoft.Identity.Web
             if (!string.IsNullOrEmpty(ex.Claims))
             {
                 properties.Items.Add(OidcConstants.AdditionalClaims, ex.Claims);
+            }
+
+            // Include current userflow for B2C
+            if (!string.IsNullOrEmpty(userflow))
+            {
+                properties.Items.Add(OidcConstants.PolicyKey, userflow);
             }
 
             return properties;

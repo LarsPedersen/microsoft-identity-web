@@ -13,16 +13,17 @@ namespace Microsoft.Identity.Web
     internal interface ITokenAcquisitionInternal : ITokenAcquisition
     {
         /// <summary>
-        /// In a Web App, adds, to the MSAL.NET cache, the account of the user authenticating to the Web App, when the authorization code is received (after the user
+        /// In a web app, adds, to the MSAL.NET cache, the account of the user authenticating to the web app, when the authorization code is received (after the user
         /// signed-in and consented)
         /// An On-behalf-of token contained in the <see cref="AuthorizationCodeReceivedContext"/> is added to the cache, so that it can then be used to acquire another token on-behalf-of the
         /// same user in order to call to downstream APIs.
         /// </summary>
         /// <param name="context">The context used when an 'AuthorizationCode' is received over the OpenIdConnect protocol.</param>
         /// <param name="scopes">Scopes to request.</param>
+        /// <param name="authenticationScheme">Authentication scheme to use.</param>
         /// <returns>A <see cref="Task"/> that represents a completed add to cache operation.</returns>
         /// <example>
-        /// From the configuration of the Authentication of the ASP.NET Core Web API:
+        /// From the configuration of the Authentication of the ASP.NET Core web API:
         /// <code>OpenIdConnectOptions options;</code>
         ///
         /// Subscribe to the authorization code received event:
@@ -41,14 +42,19 @@ namespace Microsoft.Identity.Web
         /// }
         /// </code>
         /// </example>
-        Task AddAccountToCacheFromAuthorizationCodeAsync(AuthorizationCodeReceivedContext context, IEnumerable<string> scopes);
+        Task AddAccountToCacheFromAuthorizationCodeAsync(
+            AuthorizationCodeReceivedContext context,
+            IEnumerable<string> scopes,
+            string authenticationScheme = OpenIdConnectDefaults.AuthenticationScheme);
 
         /// <summary>
         /// Removes the account associated with context.HttpContext.User from the MSAL.NET cache.
         /// </summary>
         /// <param name="context">RedirectContext passed-in to a <see cref="OpenIdConnectEvents.OnRedirectToIdentityProviderForSignOut"/>
         /// OpenID Connect event.</param>
+        /// <param name="authenticationScheme">Authentication scheme. If null, will use OpenIdConnectDefault.AuthenticationScheme
+        /// if called from a web app, and JwtBearerDefault.AuthenticationScheme if called from a web APIs.</param>
         /// <returns>A <see cref="Task"/> that represents a completed remove from cache operation.</returns>
-        Task RemoveAccountAsync(RedirectContext context);
+        Task RemoveAccountAsync(RedirectContext context, string? authenticationScheme = null);
     }
 }

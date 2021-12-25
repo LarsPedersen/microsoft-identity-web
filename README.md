@@ -14,11 +14,7 @@ Quick links:
 
 ## Nuget package
 
-<!--
-Released     | Nightly
------------------------------|-------------------------
- [![NuGet](https://img.shields.io/nuget/v/Microsoft.Identity.Web.svg?style=flat-square&label=nuget&colorB=00b200)](https://www.nuget.org/packages/Microsoft.Identity.Web/) | TBD!
--->
+ [![NuGet](https://img.shields.io/nuget/v/Microsoft.Identity.Web.svg?style=flat-square&label=nuget&colorB=00b200)](https://www.nuget.org/packages/Microsoft.Identity.Web/)
 
 ## Build Status
 
@@ -32,28 +28,25 @@ The Microsoft Identity Web roadmap is available from [Roadmap](https://github.co
 
 ### Support SLA
 
-Microsoft Identity Web is in preview.
-
 - Major versions are supported for twelve months after the release of the next major version.
 - Minor versions older than N-1 are not supported.
   > Minor versions are bugfixes or features with non-breaking (additive) API changes.  It is expected apps can upgrade.  Therefore, we will not patch old minor versions of the library. You should also confirm, in issue repros, that you are using the latest minor version before the Microsoft Identity Web team spends time investigating an issue.
-- Microsoft Identity Web is expected to become Generally Available in the last quarter of the 2020 calendar year.
 
 ## Using Microsoft Identity Web
 
 - The conceptual documentation is currently available from the [Wiki pages](https://github.com/AzureAD/microsoft-identity-web/wiki).
-- Code samples are available for [Web app samples](https://github.com/AzureAD/microsoft-identity-web/wiki/web-app-samples)
-  and [Web API samples](https://github.com/AzureAD/microsoft-identity-web/wiki#web-api-samples)
+- Code samples are available for [web app samples](https://github.com/AzureAD/microsoft-identity-web/wiki/web-app-samples)
+  and [web API samples](https://github.com/AzureAD/microsoft-identity-web/wiki#web-api-samples)
 
 ## Where do I file issues
 
-This is the correct repo to file [issues](https://github.com/AzureAD/microsoft-authentication-identity-web/issues).
+This is the correct repo to file [issues](https://github.com/AzureAD/microsoft-identity-web/issues).
 
 ## Community Help and Support
 
 If you find a bug or have a feature or documentation request, please raise the issue on [GitHub Issues](https://github.com/AzureAD/microsoft-identity-web/issues).
 
-We use [Stack Overflow](http://stackoverflow.com/questions/) with the community to provide support, using the tags `web app`, `web api`, `asp.net core`. We highly recommend you ask your questions on Stack Overflow first and browse existing issues to see if someone has asked your question before.
+We use [Stack Overflow](http://stackoverflow.com/questions/) with the community to provide support, using the tags `web-app`, `web-api`, `asp.net-core`, `microsoft-identity-web`. We highly recommend you ask your questions on Stack Overflow first and browse existing issues to see if someone has asked your question before.
 
 To provide a recommendation, visit our [User Voice page](https://feedback.azure.com/forums/169401-azure-active-directory).
 
@@ -70,5 +63,9 @@ This library controls how users sign-in and access services. We recommend you al
 ## Security Reporting
 
 If you find a security issue with our libraries or services, please report it to [secure@microsoft.com](mailto:secure@microsoft.com) with as much detail as possible. Your submission may be eligible for a bounty through the [Microsoft Bounty](http://aka.ms/bugbounty) program. Please do not post security issues to GitHub Issues or any other public site. We will contact you shortly upon receiving the information. We encourage you to get notifications of when security incidents occur by visiting [this page](https://technet.microsoft.com/en-us/security/dd252948) and subscribing to Security Advisory Alerts.
+
+## Trademarks.
+
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
 
 Copyright (c) Microsoft Corporation.  All rights reserved. Licensed under the MIT License (the "License").

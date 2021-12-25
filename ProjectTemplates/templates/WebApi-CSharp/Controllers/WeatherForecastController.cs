@@ -24,6 +24,7 @@ namespace Company.WebApplication1.Controllers
 {
 #if (!NoAuth)
     [Authorize]
+    [RequiredScope("access_as_user")] // The web API will only accept tokens 1) for users, and 2) having the "access_as_user" scope for this API
 #endif
     [ApiController]
     [Route("[controller]")]
@@ -35,9 +36,6 @@ namespace Company.WebApplication1.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
-
-        // The Web API will only accept tokens 1) for users, and 2) having the access_as_user scope for this API
-        static readonly string[] scopeRequiredByApi = new string[] { "access_as_user" };
 
 #if (GenerateApi)
         private readonly IDownstreamWebApi _downstreamWebApi;
@@ -52,9 +50,17 @@ namespace Company.WebApplication1.Controllers
         [HttpGet]
         public async Task<IEnumerable<WeatherForecast>> Get()
         {
-            HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
-
-            string downstreamApiResult = await _downstreamWebApi.CallWebApiAsync();
+            using var response = await _downstreamWebApi.CallWebApiForUserAsync("DownstreamApi").ConfigureAwait(false);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var apiResult = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                // Do something
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new HttpRequestException($"Invalid status code in the HttpResponseMessage: {response.StatusCode}: {error}");
+            }
 
             var rng = new Random();
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
@@ -79,7 +85,6 @@ namespace Company.WebApplication1.Controllers
         [HttpGet]
         public async Task<IEnumerable<WeatherForecast>> Get()
         {
-            HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
             var user = await _graphServiceClient.Me.Request().GetAsync();
 
             var rng = new Random();
@@ -100,10 +105,6 @@ namespace Company.WebApplication1.Controllers
         [HttpGet]
         public IEnumerable<WeatherForecast> Get()
         {
-#if (OrganizationalAuth || IndividualB2CAuth)
-            HttpContext.VerifyUserHasAnyAcceptedScope(scopeRequiredByApi);
-
-#endif
             var rng = new Random();
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
             {

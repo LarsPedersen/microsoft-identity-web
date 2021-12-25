@@ -12,7 +12,7 @@ namespace Microsoft.Identity.Web.Resource
 {
     /// <summary>
     /// Diagnostics used in the OpenID Connect middleware
-    /// (used in Web Apps).
+    /// (used in web apps).
     /// </summary>
     public class OpenIdConnectMiddlewareDiagnostics : IOpenIdConnectMiddlewareDiagnostics
     {
@@ -28,51 +28,61 @@ namespace Microsoft.Identity.Web.Resource
             _logger = logger;
         }
 
-        // Summary:
-        //     Invoked before redirecting to the identity provider to authenticate. This can
-        //     be used to set ProtocolMessage.State that will be persisted through the authentication
-        //     process. The ProtocolMessage can also be used to add or customize parameters
-        //     sent to the identity provider.
-        private Func<RedirectContext, Task> s_onRedirectToIdentityProvider = null!;
+        /// <summary>
+        ///  Invoked before redirecting to the identity provider to authenticate. This can
+        ///  be used to set ProtocolMessage.State that will be persisted through the authentication
+        ///  process. The ProtocolMessage can also be used to add or customize parameters
+        ///  sent to the identity provider.
+        /// </summary>
+        private Func<RedirectContext, Task> _onRedirectToIdentityProvider = null!;
 
-        // Summary:
-        //     Invoked when a protocol message is first received.
-        private Func<MessageReceivedContext, Task> s_onMessageReceived = null!;
+        /// <summary>
+        /// Invoked when a protocol message is first received.
+        /// </summary>
+        private Func<MessageReceivedContext, Task> _onMessageReceived = null!;
 
-        // Summary:
-        //     Invoked after security token validation if an authorization code is present in
-        //     the protocol message.
-        private Func<AuthorizationCodeReceivedContext, Task> s_onAuthorizationCodeReceived = null!;
+        /// <summary>
+        ///  Invoked after security token validation if an authorization code is present
+        ///  in the protocol message.
+        /// </summary>
+        private Func<AuthorizationCodeReceivedContext, Task> _onAuthorizationCodeReceived = null!;
 
-        // Summary:
-        //     Invoked after "authorization code" is redeemed for tokens at the token endpoint.
-        private Func<TokenResponseReceivedContext, Task> s_onTokenResponseReceived = null!;
+        /// <summary>
+        /// Invoked after "authorization code" is redeemed for tokens at the token endpoint.
+        /// </summary>
+        private Func<TokenResponseReceivedContext, Task> _onTokenResponseReceived = null!;
 
-        // Summary:
-        //     Invoked when an IdToken has been validated and produced an AuthenticationTicket.
-        private Func<TokenValidatedContext, Task> s_onTokenValidated = null!;
+        /// <summary>
+        /// Invoked when an IdToken has been validated and produced an AuthenticationTicket.
+        /// </summary>
+        private Func<TokenValidatedContext, Task> _onTokenValidated = null!;
 
-        // Summary:
-        //     Invoked when user information is retrieved from the UserInfoEndpoint.
-        private Func<UserInformationReceivedContext, Task> s_onUserInformationReceived = null!;
+        /// <summary>
+        /// Invoked when user information is retrieved from the UserInfoEndpoint.
+        /// </summary>
+        private Func<UserInformationReceivedContext, Task> _onUserInformationReceived = null!;
 
-        // Summary:
-        //     Invoked if exceptions are thrown during request processing. The exceptions will
-        //     be re-thrown after this event unless suppressed.
-        private Func<AuthenticationFailedContext, Task> s_onAuthenticationFailed = null!;
+        /// <summary>
+        /// Invoked if exceptions are thrown during request processing. The exceptions will
+        /// be re-thrown after this event unless suppressed.
+        /// </summary>
+        private Func<AuthenticationFailedContext, Task> _onAuthenticationFailed = null!;
 
-        // Summary:
-        //     Invoked when a request is received on the RemoteSignOutPath.
-        private Func<RemoteSignOutContext, Task> s_onRemoteSignOut = null!;
+        /// <summary>
+        /// Invoked when a request is received on the RemoteSignOutPath.
+        /// </summary>
+        private Func<RemoteSignOutContext, Task> _onRemoteSignOut = null!;
 
-        // Summary:
-        //     Invoked before redirecting to the identity provider to sign out.
-        private Func<RedirectContext, Task> s_onRedirectToIdentityProviderForSignOut = null!;
+        /// <summary>
+        /// Invoked before redirecting to the identity provider to sign out.
+        /// </summary>
+        private Func<RedirectContext, Task> _onRedirectToIdentityProviderForSignOut = null!;
 
-        // Summary:
-        //     Invoked before redirecting to the Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectOptions.SignedOutRedirectUri
-        //     at the end of a remote sign-out flow.
-        private Func<RemoteSignOutContext, Task> s_onSignedOutCallbackRedirect = null!;
+        /// <summary>
+        /// Invoked before redirecting to the Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectOptions.SignedOutRedirectUri
+        /// at the end of a remote sign-out flow.
+        /// </summary>
+        private Func<RemoteSignOutContext, Task> _onSignedOutCallbackRedirect = null!;
 
         /// <summary>
         /// Subscribes to all the OpenIdConnect events, to help debugging, while
@@ -83,34 +93,34 @@ namespace Microsoft.Identity.Web.Resource
         {
             events ??= new OpenIdConnectEvents();
 
-            s_onRedirectToIdentityProvider = events.OnRedirectToIdentityProvider;
+            _onRedirectToIdentityProvider = events.OnRedirectToIdentityProvider;
             events.OnRedirectToIdentityProvider = OnRedirectToIdentityProviderAsync;
 
-            s_onMessageReceived = events.OnMessageReceived;
+            _onMessageReceived = events.OnMessageReceived;
             events.OnMessageReceived = OnMessageReceivedAsync;
 
-            s_onAuthorizationCodeReceived = events.OnAuthorizationCodeReceived;
+            _onAuthorizationCodeReceived = events.OnAuthorizationCodeReceived;
             events.OnAuthorizationCodeReceived = OnAuthorizationCodeReceivedAsync;
 
-            s_onTokenResponseReceived = events.OnTokenResponseReceived;
+            _onTokenResponseReceived = events.OnTokenResponseReceived;
             events.OnTokenResponseReceived = OnTokenResponseReceivedAsync;
 
-            s_onTokenValidated = events.OnTokenValidated;
+            _onTokenValidated = events.OnTokenValidated;
             events.OnTokenValidated = OnTokenValidatedAsync;
 
-            s_onUserInformationReceived = events.OnUserInformationReceived;
+            _onUserInformationReceived = events.OnUserInformationReceived;
             events.OnUserInformationReceived = OnUserInformationReceivedAsync;
 
-            s_onAuthenticationFailed = events.OnAuthenticationFailed;
+            _onAuthenticationFailed = events.OnAuthenticationFailed;
             events.OnAuthenticationFailed = OnAuthenticationFailedAsync;
 
-            s_onRemoteSignOut = events.OnRemoteSignOut;
+            _onRemoteSignOut = events.OnRemoteSignOut;
             events.OnRemoteSignOut = OnRemoteSignOutAsync;
 
-            s_onRedirectToIdentityProviderForSignOut = events.OnRedirectToIdentityProviderForSignOut;
+            _onRedirectToIdentityProviderForSignOut = events.OnRedirectToIdentityProviderForSignOut;
             events.OnRedirectToIdentityProviderForSignOut = OnRedirectToIdentityProviderForSignOutAsync;
 
-            s_onSignedOutCallbackRedirect = events.OnSignedOutCallbackRedirect;
+            _onSignedOutCallbackRedirect = events.OnSignedOutCallbackRedirect;
             events.OnSignedOutCallbackRedirect = OnSignedOutCallbackRedirectAsync;
         }
 
@@ -118,7 +128,7 @@ namespace Microsoft.Identity.Web.Resource
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnRedirectToIdentityProviderAsync)));
 
-            await s_onRedirectToIdentityProvider(context).ConfigureAwait(false);
+            await _onRedirectToIdentityProvider(context).ConfigureAwait(false);
 
             _logger.LogDebug("   Sending OpenIdConnect message:");
             DisplayProtocolMessage(context.ProtocolMessage);
@@ -142,63 +152,63 @@ namespace Microsoft.Identity.Web.Resource
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnMessageReceivedAsync)));
             _logger.LogDebug("   Received from STS the OpenIdConnect message:");
             DisplayProtocolMessage(context.ProtocolMessage);
-            await s_onMessageReceived(context).ConfigureAwait(false);
+            await _onMessageReceived(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnMessageReceivedAsync)));
         }
 
         private async Task OnAuthorizationCodeReceivedAsync(AuthorizationCodeReceivedContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnAuthorizationCodeReceivedAsync)));
-            await s_onAuthorizationCodeReceived(context).ConfigureAwait(false);
+            await _onAuthorizationCodeReceived(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnAuthorizationCodeReceivedAsync)));
         }
 
         private async Task OnTokenResponseReceivedAsync(TokenResponseReceivedContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnTokenResponseReceivedAsync)));
-            await s_onTokenResponseReceived(context).ConfigureAwait(false);
+            await _onTokenResponseReceived(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnTokenResponseReceivedAsync)));
         }
 
         private async Task OnTokenValidatedAsync(TokenValidatedContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnTokenValidatedAsync)));
-            await s_onTokenValidated(context).ConfigureAwait(false);
+            await _onTokenValidated(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnTokenValidatedAsync)));
         }
 
         private async Task OnUserInformationReceivedAsync(UserInformationReceivedContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnUserInformationReceivedAsync)));
-            await s_onUserInformationReceived(context).ConfigureAwait(false);
+            await _onUserInformationReceived(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnUserInformationReceivedAsync)));
         }
 
         private async Task OnAuthenticationFailedAsync(AuthenticationFailedContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnAuthenticationFailedAsync)));
-            await s_onAuthenticationFailed(context).ConfigureAwait(false);
+            await _onAuthenticationFailed(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnAuthenticationFailedAsync)));
         }
 
         private async Task OnRedirectToIdentityProviderForSignOutAsync(RedirectContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnRedirectToIdentityProviderForSignOutAsync)));
-            await s_onRedirectToIdentityProviderForSignOut(context).ConfigureAwait(false);
+            await _onRedirectToIdentityProviderForSignOut(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnRedirectToIdentityProviderForSignOutAsync)));
         }
 
         private async Task OnRemoteSignOutAsync(RemoteSignOutContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnRemoteSignOutAsync)));
-            await s_onRemoteSignOut(context).ConfigureAwait(false);
+            await _onRemoteSignOut(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnRemoteSignOutAsync)));
         }
 
         private async Task OnSignedOutCallbackRedirectAsync(RemoteSignOutContext context)
         {
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodBegin, nameof(OnSignedOutCallbackRedirectAsync)));
-            await s_onSignedOutCallbackRedirect(context).ConfigureAwait(false);
+            await _onSignedOutCallbackRedirect(context).ConfigureAwait(false);
             _logger.LogDebug(string.Format(CultureInfo.InvariantCulture, LogMessages.MethodEnd, nameof(OnSignedOutCallbackRedirectAsync)));
         }
     }

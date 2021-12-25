@@ -8,7 +8,7 @@ namespace Microsoft.Identity.Web
 {
     internal class MsalAspNetCoreHttpClientFactory : IMsalHttpClientFactory
     {
-        private IHttpClientFactory _httpClientFactory;
+        private readonly IHttpClientFactory _httpClientFactory;
 
         public MsalAspNetCoreHttpClientFactory(IHttpClientFactory httpClientFactory)
         {
@@ -17,7 +17,9 @@ namespace Microsoft.Identity.Web
 
         public HttpClient GetHttpClient()
         {
-            return _httpClientFactory.CreateClient();
+            HttpClient httpClient = _httpClientFactory.CreateClient();
+            httpClient.DefaultRequestHeaders.Add(Constants.TelemetryHeaderKey, IdHelper.CreateTelemetryInfo());
+            return httpClient;
         }
     }
 }

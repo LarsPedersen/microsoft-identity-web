@@ -4,16 +4,17 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Identity.Web.Util;
 
 namespace Microsoft.Identity.Web
 {
     internal class ClientInfo
     {
         [JsonPropertyName(ClaimConstants.UniqueObjectIdentifier)]
-        public string UniqueObjectIdentifier { get; set; } = null!;
+        public string? UniqueObjectIdentifier { get; set; } = null;
 
         [JsonPropertyName(ClaimConstants.UniqueTenantIdentifier)]
-        public string UniqueTenantIdentifier { get; set; } = null!;
+        public string? UniqueTenantIdentifier { get; set; } = null;
 
         public static ClientInfo? CreateFromJson(string clientInfo)
         {
@@ -22,7 +23,8 @@ namespace Microsoft.Identity.Web
                 throw new ArgumentNullException(nameof(clientInfo), IDWebErrorMessage.ClientInfoReturnedFromServerIsNull);
             }
 
-            return DeserializeFromJson(Base64UrlHelpers.DecodeToBytes(clientInfo));
+            var bytes = Base64UrlHelpers.DecodeBytes(clientInfo);
+            return bytes != null ? DeserializeFromJson(bytes) : null;
         }
 
         internal static ClientInfo? DeserializeFromJson(byte[] jsonByteArray)

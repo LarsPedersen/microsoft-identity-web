@@ -213,16 +213,58 @@
           ]
         },
         {
-          "condition": "(Hosted && !GenerateApi)",
-            "exclude": [
-              "Server/Services/DownstreamWebApi.cs"
-            ]
+          "condition": "(!GenerateApi)",
+          "exclude": [
+            "Client/Pages/CallWebApi.razor",
+            "Server/Controllers/CallWebApiController.cs"
+          ]
         },
         {
-          "condition": "(Hosted &&!GenerateGraph)",
+          "condition": "(!GenerateGraph)",
           "exclude": [
-             "Server/Services/MicrosoftGraphServiceExtensions.cs",
-             "Server/Services/TokenAcquisitionCredentialProvider.cs"
+            "Client/Shared/NavMenu.CallsMicrosoftGraph.razor",
+            "Client/Pages/ShowProfile.razor",
+            "Server/Controllers/ShowProfileController.cs"
+            ]
+        },
+         {
+          "condition": "(!GenerateApiOrGraph && Hosted)",
+          "rename": {
+            "Client/Shared/NavMenu.NoGraphOrApi.razor": "Client/Shared/NavMenu.razor"
+          },
+          "exclude": [
+            "Client/Shared/NavMenu.CallsMicrosoftGraph.razor",
+            "Client/Shared/NavMenu.CallsWebApi.razor"
+          ]
+        },
+        {
+          "condition": "(!GenerateApiOrGraph && !Hosted)",
+          "rename": {
+            "Client/Shared/NavMenu.NoGraphOrApi.razor": "Shared/NavMenu.razor"
+          },
+          "exclude": [
+            "Client/Shared/NavMenu.CallsMicrosoftGraph.razor",
+            "Client/Shared/NavMenu.CallsWebApi.razor"
+          ]
+        },
+        {
+          "condition": "(GenerateGraph)",
+          "rename": {
+            "Client/Shared/NavMenu.CallsMicrosoftGraph.razor": "Client/Shared/NavMenu.razor"
+          },
+          "exclude": [
+            "Client/Shared/NavMenu.NoGraphOrApi.razor",
+            "Client/Shared/NavMenu.CallsWebApi.razor"
+          ]
+        },
+        {
+          "condition": "(GenerateApi)",
+          "rename": {
+            "Client/Shared/NavMenu.CallsWebApi.razor": "Client/Shared/NavMenu.razor"
+          },
+          "exclude": [
+            "Client/Shared/NavMenu.NoGraphOrApi.razor",
+            "Client/Shared/NavMenu.CallsMicrosoftGraph.razor"
           ]
         }
       ]
@@ -301,7 +343,7 @@
     "SignUpSignInPolicyId": {
       "type": "parameter",
       "datatype": "string",
-      "defaultValue": "",
+      "defaultValue": "b2c_1_susi",
       "replaces": "MySignUpSignInPolicyId",
       "description": "The sign-in and sign-up policy ID for this project (use with IndividualB2C auth)."
     },
@@ -340,7 +382,7 @@
       "type": "parameter",
       "datatype": "string",
       "replaces": "api-scope",
-      "defaultValue": "user_impersonation",
+      "defaultValue": "access_as_user",
       "description": "The API scope the client needs to request to provision an access token. (use with IndividualB2C, SingleOrg)."
     },
     "TenantId": {
@@ -470,8 +512,8 @@
         "type": "parameter",
         "datatype": "string",
         "replaces": "[WebApiUrl]",
-        "defaultValue" : "https://graph.microsoft.com/v1.0/me",
-        "description": "URL of the API to call from the web app. This option only applies if --auth SingleOrg, --auth MultiOrg or --auth IndividualB2C is specified."
+        "defaultValue": "https://graph.microsoft.com/v1.0",
+        "description": "URL of the API to call from the web app. This option only applies if --auth SingleOrg, --auth MultiOrg or --auth IndividualB2C without and ASP.NET Core host is specified."
     },
     "CallsMicrosoftGraph": {
         "type": "parameter",
@@ -483,15 +525,15 @@
       "type": "parameter",
       "datatype": "string",
       "replaces" :  "user.read",
-      "description": "Scopes to request to call the API from the web app. This option only applies if --auth SingleOrg, --auth MultiOrg or --auth IndividualB2C is specified."
+      "description": "Scopes to request to call the API from the web app. This option only applies if --auth SingleOrg, --auth MultiOrg or --auth IndividualB2C without and ASP.NET Core host is specified."
     },
     "GenerateApi": {
         "type": "computed",
-        "value": "( ((IndividualB2CAuth && !Hosted) || OrganizationalAuth) && (CalledApiUrl != \"https://graph.microsoft.com/v1.0/me\" || CalledApiScopes != \"user.read\"))"
+        "value": "(( (IndividualB2CAuth && !Hosted) || (OrganizationalAuth && Hosted)) && (CalledApiUrl != \"https://graph.microsoft.com/v1.0\" || CalledApiScopes != \"user.read\"))"
     },
     "GenerateGraph": {
         "type": "computed",
-        "value": "(OrganizationalAuth && CallsMicrosoftGraph)"
+        "value": "(OrganizationalAuth && CallsMicrosoftGraph && Hosted)"
     },
     "GenerateApiOrGraph": {
         "type": "computed",

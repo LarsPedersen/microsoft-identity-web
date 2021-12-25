@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Globalization;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web.Test.Common;
 using Xunit;
@@ -23,12 +22,12 @@ namespace Microsoft.Identity.Web.Test.Certificates
 
             ConfidentialClientApplicationOptions options = new ConfidentialClientApplicationOptions
             {
-                ClientSecret = "some secret",
+                ClientSecret = "some_secret",
             };
 
             // Act & Assert
             // Should not throw
-            MicrosoftIdentityOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
+            MergedOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
         }
 
         [Theory]
@@ -53,7 +52,7 @@ namespace Microsoft.Identity.Web.Test.Certificates
 
             // Act & Assert
             // Should not throw
-            MicrosoftIdentityOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
+            MergedOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
         }
 
         [Fact]
@@ -73,7 +72,7 @@ namespace Microsoft.Identity.Web.Test.Certificates
 
             // Act
             Action credentialAction = () =>
-            MicrosoftIdentityOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
+            MergedOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
 
             // Assert
             var exception = Assert.Throws<MsalClientException>(credentialAction);
@@ -103,7 +102,7 @@ namespace Microsoft.Identity.Web.Test.Certificates
 
             // Act
             Action credentialAction = () =>
-            MicrosoftIdentityOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
+            MergedOptionsValidation.ValidateEitherClientCertificateOrClientSecret(options.ClientSecret, microsoftIdentityOptions.ClientCertificates);
 
             // Assert
             var exception = Assert.Throws<MsalClientException>(credentialAction);

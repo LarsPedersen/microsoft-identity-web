@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
-using System.Globalization;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -29,10 +29,10 @@ namespace Microsoft.Identity.Web.TokenCacheProviders.Session
     /// </code>
     /// </remarks>
     /// <seealso>https://aka.ms/msal-net-token-cache-serialization</seealso>
-    public class MsalSessionTokenCacheProvider : MsalAbstractTokenCacheProvider, IMsalTokenCacheProvider
+    public partial class MsalSessionTokenCacheProvider : MsalAbstractTokenCacheProvider
     {
-        private ILogger _logger;
-        private ISession _session;
+        private readonly ILogger _logger;
+        private readonly ISession _session;
 
         /// <summary>
         /// MSAL Token cache provider constructor.
@@ -42,6 +42,7 @@ namespace Microsoft.Identity.Web.TokenCacheProviders.Session
         public MsalSessionTokenCacheProvider(
             ISession session,
             ILogger<MsalSessionTokenCacheProvider> logger)
+            : base(null)
         {
             _session = session;
             _logger = logger;
@@ -55,18 +56,32 @@ namespace Microsoft.Identity.Web.TokenCacheProviders.Session
         /// <returns>Read blob.</returns>
         protected override async Task<byte[]> ReadCacheBytesAsync(string cacheKey)
         {
-            await _session.LoadAsync().ConfigureAwait(false);
+            return await ReadCacheBytesAsync(cacheKey, new CacheSerializerHints()).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Read a blob representing the token cache from its key.
+        /// </summary>
+        /// <param name="cacheKey">Key representing the token cache
+        /// (account or app).</param>
+        /// <param name="cacheSerializerHints">Hints for the cache serialization implementation optimization.</param>
+        /// <returns>Read blob.</returns>
+        protected override async Task<byte[]> ReadCacheBytesAsync(string cacheKey, CacheSerializerHints cacheSerializerHints)
+        {
+#pragma warning disable CA1062 // Validate arguments of public methods
+            await _session.LoadAsync(cacheSerializerHints.CancellationToken).ConfigureAwait(false);
+#pragma warning restore CA1062 // Validate arguments of public methods
 
             _sessionLock.EnterReadLock();
             try
             {
                 if (_session.TryGetValue(cacheKey, out byte[] blob))
                 {
-                    _logger.LogInformation(string.Format(CultureInfo.InvariantCulture, LogMessages.DeserializingSessionCache, _session.Id, cacheKey));
+                    Logger.SessionCache(_logger, "Read", _session.Id, cacheKey, null);
                 }
                 else
                 {
-                    _logger.LogInformation(string.Format(CultureInfo.InvariantCulture, LogMessages.SessionCacheKeyNotFound, cacheKey, _session.Id));
+                    Logger.SessionCacheKeyNotFound(_logger, cacheKey, _session.Id, null);
                 }
 
                 return blob;
@@ -88,7 +103,7 @@ namespace Microsoft.Identity.Web.TokenCacheProviders.Session
             _sessionLock.EnterWriteLock();
             try
             {
-                _logger.LogInformation(string.Format(CultureInfo.InvariantCulture, LogMessages.SerializingSessionCache, _session.Id, cacheKey));
+                Logger.SessionCache(_logger, "Write", _session.Id, cacheKey, null);
 
                 // Reflect changes in the persistent store
                 _session.Set(cacheKey, bytes);
@@ -110,7 +125,7 @@ namespace Microsoft.Identity.Web.TokenCacheProviders.Session
             _sessionLock.EnterWriteLock();
             try
             {
-                _logger.LogInformation(string.Format(CultureInfo.InvariantCulture, LogMessages.ClearingSessionCache, _session.Id, cacheKey));
+                Logger.SessionCache(_logger, "Remove", _session.Id, cacheKey, null);
 
                 // Reflect changes in the persistent store
                 _session.Remove(cacheKey);

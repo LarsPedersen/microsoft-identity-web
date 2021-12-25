@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Microsoft.Identity.Web
 {
     /// <summary>
-    /// Extensions for IServiceCollection for startup initialization of Web APIs.
+    /// Extensions for IServiceCollection for startup initialization of web APIs.
     /// </summary>
     public static class ServiceCollectionExtensions
     {
@@ -61,12 +61,12 @@ namespace Microsoft.Identity.Web
             if (isTokenAcquisitionSingleton)
             {
                 services.AddSingleton<ITokenAcquisition, TokenAcquisition>();
-                services.AddSingleton<ITokenAcquisitionInternal>(s => (ITokenAcquisitionInternal)s.GetRequiredService<ITokenAcquisition>());
+                services.AddSingleton(s => (ITokenAcquisitionInternal)s.GetRequiredService<ITokenAcquisition>());
             }
             else
             {
                 services.AddScoped<ITokenAcquisition, TokenAcquisition>();
-                services.AddScoped<ITokenAcquisitionInternal>(s => (ITokenAcquisitionInternal)s.GetRequiredService<ITokenAcquisition>());
+                services.AddScoped(s => (ITokenAcquisitionInternal)s.GetRequiredService<ITokenAcquisition>());
             }
 
             return services;
